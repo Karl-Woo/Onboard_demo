@@ -152,27 +152,12 @@ function ChatButton({
   // widget should match Figma node 40000383:6971 (small button only).
   collapseOnly?: boolean;
 }) {
-  const [hasEntered, setHasEntered] = useState(false);
+  // The pill (expanded) state has been removed — the button always stays
+  // 80×80. Intro flow lives in ChatbotWidget: hold the button for 1 s,
+  // then auto-open the chat panel.
+  const hasEntered = false;
   const [isHovered, setIsHovered] = useState(false);
   const [isPressed, setIsPressed] = useState(false);
-
-  // Animate between collapsed (80 × 80) and expanded (572 × 80 pill) states:
-  //   - On first mount with `collapseOnly` false, hold the collapsed
-  //     state for 1200 ms so the user sees the icon, then expand.
-  //   - If `collapseOnly` flips TRUE while the pill is open, collapse
-  //     back to 80 × 80. The width/padding transitions on the element
-  //     below handle the animation itself (1.1 s easeOutExpo).
-  //   - If `collapseOnly` flips FALSE again, wait 1200 ms and re-expand
-  //     just like the initial mount, so returning to a pill state is
-  //     visually consistent with the first reveal.
-  useEffect(() => {
-    if (collapseOnly) {
-      setHasEntered(false);
-      return;
-    }
-    const timer = setTimeout(() => setHasEntered(true), 1200);
-    return () => clearTimeout(timer);
-  }, [collapseOnly]);
 
   // Chat panel is 572 px wide. Collapsed state is a perfect 80 × 80 square
   // (12 px padding each side around the 56 px icon).
@@ -1826,6 +1811,7 @@ function RecommendationCard({
 function MessageContainer({
   messages,
   showWelcome,
+  isFirstMessage,
   showSuggestions,
   suggestionsDismissed,
   continueClicked,
@@ -1835,6 +1821,7 @@ function MessageContainer({
   buyClicked,
   buyReadyClicked,
   salesInsteadClicked,
+  onIntroChipSelect,
   onSuggestionSelect,
   onContinue,
   onFileUpload,
@@ -1847,6 +1834,7 @@ function MessageContainer({
 }: {
   messages: Message[];
   showWelcome: boolean;
+  isFirstMessage: boolean;
   showSuggestions: boolean;
   suggestionsDismissed: boolean;
   continueClicked: boolean;
@@ -1856,6 +1844,7 @@ function MessageContainer({
   buyClicked: boolean;
   buyReadyClicked: boolean;
   salesInsteadClicked: boolean;
+  onIntroChipSelect: (text: string) => void;
   onSuggestionSelect: (text: string) => void;
   onContinue: () => void;
   onFileUpload: () => void;
@@ -2130,6 +2119,31 @@ function MessageContainer({
             />
           </div>
         )}
+        {/* Intro chip — anchored bottom-right (same position as the post-
+            locations suggestion chips) until the user sends their first
+            message. Hover-only for now: `interactive={false}` keeps the
+            hover/focus visuals but ignores clicks. */}
+        {showWelcome && isFirstMessage && (
+          <div className="mt-auto w-full" data-name="Intro chip">
+            <div
+              className="w-full px-[16px] pb-[16px] pt-[8px] flex flex-col items-end gap-[8px] shrink-0"
+            >
+              <div
+                className="flex w-full justify-end"
+                style={{
+                  animation: `chatbot-msg-enter-ai 0.55s ${MESSAGE_ENTRY_CURVE} 1800ms both`,
+                  transformOrigin: 'bottom right',
+                }}
+              >
+                <SuggestionChipButton
+                  text="I don't have a location for my business yet."
+                  interactive={false}
+                  onClick={() => {}}
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -2286,9 +2300,9 @@ function ChatPanel({
     }
   }, [isOpen, welcomeShown]);
 
-  const handleSend = () => {
-    if (inputValue.trim() && isFirstMessage) {
-      const userInput = inputValue.trim();
+  const handleSend = (forcedText?: string) => {
+    const userInput = (forcedText ?? inputValue).trim();
+    if (userInput && isFirstMessage) {
       const [businessName] = userInput.split(',').map(s => s.trim());
 
       // Add user message
@@ -2324,9 +2338,9 @@ function ChatPanel({
           setMessages(prev => prev.filter(m => !m.isThinking).concat([{ isUser: false, locations }]));
         }, 2000);
       }, 500);
-    } else if (inputValue.trim()) {
+    } else if (userInput) {
       // For subsequent messages, just add as regular message
-      setMessages(prev => [...prev, { text: inputValue, isUser: true }]);
+      setMessages(prev => [...prev, { text: userInput, isUser: true }]);
       setInputValue('');
     }
   };
@@ -2590,11 +2604,22 @@ function ChatPanel({
         content-stretch flex flex-col items-start overflow-clip
         rounded-[16px] shadow-[0px_1px_3px_0px_rgba(0,0,0,0.12)]
         w-[572px] z-50
-        ${isOpen ? 'h-[calc(100vh-80px)] opacity-100 scale-100' : 'h-[56px] opacity-0 scale-95 pointer-events-none'}
+        ${isOpen ? '' : 'pointer-events-none'}
       `}
       style={{
+        // Opacity / height / scale set inline so the transitions actually
+        // animate. Tailwind v4 implements `scale-*` via CSS custom
+        // properties, which can break `transition: scale` when the class
+        // toggles, leaving the panel stuck invisible.
         transformOrigin: 'bottom right',
-        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+        opacity: isOpen ? 1 : 0,
+        height: isOpen ? 'calc(100vh - 80px)' : '56px',
+        transform: isOpen ? 'scale(1)' : 'scale(0.95)',
+        transition: [
+          'opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+          'height 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+          'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+        ].join(', '),
       }}
       data-name="Chat"
     >
@@ -2602,6 +2627,7 @@ function ChatPanel({
       <MessageContainer
         messages={messages}
         showWelcome={welcomeShown}
+        isFirstMessage={isFirstMessage}
         showSuggestions={showSuggestions}
         suggestionsDismissed={suggestionsDismissed}
         continueClicked={continueClicked}
@@ -2611,6 +2637,7 @@ function ChatPanel({
         buyClicked={buyClicked}
         buyReadyClicked={buyReadyClicked}
         salesInsteadClicked={salesInsteadClicked}
+        onIntroChipSelect={(text) => handleSend(text)}
         onSuggestionSelect={handleSuggestionSelect}
         onContinue={handleContinue}
         onFileUpload={handleFileUpload}
@@ -2754,6 +2781,15 @@ export function ChatbotWidget({
 } = {}) {
   const [isOpen, setIsOpen] = useState(false);
 
+  // Intro: on first mount (home page only), hold the 80×80 button for
+  // 1 s then auto-open the chat panel. On checkout (`collapseOnly`) the
+  // button stays closed and only opens on click.
+  useEffect(() => {
+    if (collapseOnly) return;
+    const timer = setTimeout(() => setIsOpen(true), 1000);
+    return () => clearTimeout(timer);
+  }, [collapseOnly]);
+
   // When the user clicks "Buy this setup," immediately close the chat so
   // the ChatButton slides back to its small state as the page swaps.
   const handleBuySetup = () => {
@@ -2771,12 +2807,15 @@ export function ChatbotWidget({
           onBuySetup={handleBuySetup}
         />
         <div
-          className={`
-            ${isOpen ? 'opacity-0 scale-90 pointer-events-none' : 'opacity-100 scale-100'}
-          `}
+          className={isOpen ? 'pointer-events-none' : ''}
           style={{
             transformOrigin: 'bottom right',
-            transition: `all 0.6s ${HOVER_CURVE}`,
+            opacity: isOpen ? 0 : 1,
+            transform: isOpen ? 'scale(0.9)' : 'scale(1)',
+            transition: [
+              `opacity 0.6s ${HOVER_CURVE}`,
+              `transform 0.6s ${HOVER_CURVE}`,
+            ].join(', '),
           }}
         >
           <ChatButton

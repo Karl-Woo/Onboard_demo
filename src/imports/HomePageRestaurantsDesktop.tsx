@@ -923,9 +923,6 @@ function Cta() {
 function Testimonials() {
   return (
     <div className="absolute content-stretch flex flex-col h-[783px] items-start justify-between inset-x-[24px] overflow-clip p-[56px] rounded-[16px] top-[24px]" data-name="Testimonials">
-      <video autoPlay muted className="absolute max-w-none object-cover rounded-[16px] size-full" controlsList="nodownload" loop playsInline>
-        <source src="/_videos/v1/057661a6367f82cde3944db03823bd5836c89e3f" />
-      </video>
       <Blur />
       <QuoteBlock />
       <Cta />
