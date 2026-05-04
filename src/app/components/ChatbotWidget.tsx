@@ -1436,6 +1436,21 @@ function PostRecChipPair({
       onClick: onConnect,
     });
   }
+  if (!buyClicked && !connectClicked) {
+    chips.push({
+      id: 'options',
+      text: 'Show me more options',
+      interactive: false,
+      isClicked: false,
+      onClick: () => {},
+    });
+  }
+
+  const dataNameById: Record<string, string> = {
+    buy: 'Buy bubble',
+    connect: 'Connect bubble',
+    options: 'Options bubble',
+  };
 
   return (
     <div
@@ -1453,7 +1468,7 @@ function PostRecChipPair({
             }ms both`,
             transformOrigin: 'bottom right',
           }}
-          data-name={chip.id === 'buy' ? 'Buy bubble' : 'Connect bubble'}
+          data-name={dataNameById[chip.id]}
         >
           <ChipButtonContent
             text={chip.text}
@@ -1479,15 +1494,23 @@ function SingleChip({
   isClicked,
   onClick,
   dataName,
+  optionsCompanion = false,
 }: {
   text: string;
   isClicked: boolean;
   onClick: () => void;
   dataName: string;
+  // When true, renders a non-interactive "Show me other options" chip below
+  // the main chip. Hidden once `isClicked` flips, mirroring the behavior of
+  // the third chip in `PostRecChipPair`.
+  optionsCompanion?: boolean;
 }) {
+  const showCompanion = optionsCompanion && !isClicked;
   return (
     <div
-      className="w-full px-[16px] pt-[8px] pb-[16px] flex flex-col items-end shrink-0"
+      className={`w-full px-[16px] pt-[8px] pb-[16px] flex flex-col items-end shrink-0${
+        showCompanion ? ' gap-[8px]' : ''
+      }`}
       data-name={dataName}
     >
       <div
@@ -1501,6 +1524,23 @@ function SingleChip({
           onClick={onClick}
         />
       </div>
+      {showCompanion && (
+        <div
+          className="flex w-full justify-end"
+          style={{
+            animation: `chatbot-msg-enter-ai 0.55s ${MESSAGE_ENTRY_CURVE} 90ms both`,
+            transformOrigin: 'bottom right',
+          }}
+          data-name="Options bubble"
+        >
+          <ChipButtonContent
+            text="Show me other options"
+            isClicked={false}
+            interactive={false}
+            onClick={() => {}}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -2070,6 +2110,7 @@ function MessageContainer({
                     isClicked={buyReadyClicked}
                     onClick={onBuyReady}
                     dataName="Buy ready chip"
+                    optionsCompanion
                   />
                 </MessageEnter>
               </div>
@@ -2083,6 +2124,7 @@ function MessageContainer({
                     isClicked={salesInsteadClicked}
                     onClick={onSalesInstead}
                     dataName="Sales instead chip"
+                    optionsCompanion
                   />
                 </MessageEnter>
               </div>
