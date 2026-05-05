@@ -9,6 +9,8 @@ import imgDragAndDrop from "@/assets/drag-and-drop.png";
 import imgEllipse53 from "@/assets/Ellipse 53.png";
 import imgStationSolo from "@/assets/31218de414fc76777e1a234f4b7e4df8ff06ee32.png";
 import imgFlex from "@/assets/930308e4e9c7cf19b0bb9638ade4dfb4f16111e1.png";
+import imgMini from "@/assets/9e879022823ed79de83b0ae3e7918c31886019fe.png";
+import imgKds from "@/assets/73cdc52eea9ba2fe886ed6994ec367f3152d4a25.png";
 import iconDevices from "@/assets/devices.svg";
 import iconUpload from "@/assets/upload.svg";
 import iconSettings from "@/assets/settings.svg";
@@ -369,6 +371,9 @@ interface Message {
   // When true, this renders the Clover Capital recommendation card
   // (Figma 40000363:5552).
   recommendation?: boolean;
+  // When true, renders the "Other recommended plans" horizontal carousel
+  // shown after the main recommendation card (Figma 40000766:12701).
+  otherPlansCarousel?: boolean;
   // When true, renders the pair of post-recommendation chips — "Looks
   // good. Buy this setup." (hoverable only) and "Connect me to sales."
   // (clickable) — in a single flex container with the same `gap-[8px]`
@@ -1848,11 +1853,219 @@ function RecommendationCard({
             See plan details
           </p>
         </div>
-        {/* Sentinel — observed by the parent scroll container. Once this
-            1 px element comes into view, we know the user has scrolled to
-            the bottom of the card and we can surface the follow-up chips. */}
-        <div ref={sentinelRef} className="h-px w-full" aria-hidden="true" />
       </div>
+    </div>
+  );
+}
+
+/**
+ * OtherPlansCarousel — matches Figma node 40000766:12701. Header text
+ * "Other recommended plans:" plus a horizontal scroll strip of two
+ * PlanCards: "Ultimate" (3 devices, fully visible) and "Essential"
+ * (2 devices, partially visible / cut off at the right edge to suggest
+ * scroll affordance).
+ *
+ * Owns the same IntersectionObserver-based "bottom reached" hook that
+ * RecommendationCard used to own. The follow-up post-rec chip pair only
+ * appears once the user has seen the bottom of THIS section, not the
+ * recommendation card above it.
+ */
+function PlanCard({
+  tier,
+  hardware,
+  planLabel,
+  images,
+}: {
+  tier: string;
+  hardware: string;
+  planLabel: string;
+  images: string[];
+}) {
+  return (
+    <div
+      className="shrink-0 w-[433px] bg-white rounded-[16px] p-[16px] flex flex-col gap-[24px]"
+      data-name="Plan card"
+    >
+      <p className="m-0 font-['Graphik:Medium',sans-serif] text-[16px] leading-[24px] text-[#228800]">
+        {tier}
+      </p>
+      <div className="flex flex-col">
+        <p className="m-0 font-['Graphik:Semibold',sans-serif] text-[24px] leading-[32px] text-black whitespace-nowrap">
+          {hardware}
+        </p>
+        <p className="m-0 font-['Graphik:Semibold',sans-serif] text-[24px] leading-[32px] text-[#5a5a5a] whitespace-nowrap">
+          {planLabel}
+        </p>
+      </div>
+      <div className="flex gap-[12px] h-[120px] w-full">
+        {images.map((src, i) => (
+          <div
+            key={i}
+            className="flex-1 h-full rounded-[8px] overflow-hidden bg-[#f5f5f5]"
+          >
+            <img
+              src={src}
+              alt=""
+              aria-hidden="true"
+              className="w-full h-full object-cover"
+              draggable={false}
+            />
+          </div>
+        ))}
+      </div>
+      <p className="m-0 font-['Graphik:Medium',sans-serif] text-[14px] leading-[20px] text-[#228800] text-center cursor-pointer">
+        See plan details
+      </p>
+    </div>
+  );
+}
+
+function OtherPlansCarousel({
+  onBottomReached,
+}: {
+  onBottomReached?: () => void;
+}) {
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  // Bottom-of-section observer — same pattern as RecommendationCard used
+  // to use, now relocated here so the post-rec chips only appear once
+  // the user has scrolled past the carousel.
+  useEffect(() => {
+    if (!sentinelRef.current || !onBottomReached) return;
+    const el = sentinelRef.current;
+    let root: HTMLElement | null = el.parentElement;
+    while (root) {
+      const overflow = getComputedStyle(root).overflowY;
+      if (overflow === 'auto' || overflow === 'scroll') break;
+      root = root.parentElement;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          onBottomReached();
+          observer.disconnect();
+        }
+      },
+      { root, threshold: 0.1 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [onBottomReached]);
+
+  // Vertical wheel → horizontal scroll (mirrors LocationsResponse).
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const handler = (e: WheelEvent) => {
+      if (el.scrollWidth <= el.clientWidth) return;
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+        e.preventDefault();
+        el.scrollLeft += e.deltaY;
+      }
+    };
+    el.addEventListener('wheel', handler, { passive: false });
+    return () => el.removeEventListener('wheel', handler);
+  }, []);
+
+  // Click-and-drag scroll (mirrors LocationsResponse).
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    let active = false;
+    let startX = 0;
+    let startScroll = 0;
+    let moved = 0;
+
+    const onPointerDown = (e: PointerEvent) => {
+      if (e.button !== undefined && e.button !== 0) return;
+      active = true;
+      moved = 0;
+      startX = e.clientX;
+      startScroll = el.scrollLeft;
+      setIsDragging(true);
+      el.setPointerCapture?.(e.pointerId);
+    };
+    const onPointerMove = (e: PointerEvent) => {
+      if (!active) return;
+      const dx = e.clientX - startX;
+      moved = Math.max(moved, Math.abs(dx));
+      el.scrollLeft = startScroll - dx;
+    };
+    const onPointerUp = (e: PointerEvent) => {
+      if (!active) return;
+      active = false;
+      setIsDragging(false);
+      try {
+        el.releasePointerCapture?.(e.pointerId);
+      } catch {
+        /* no-op */
+      }
+      if (moved > 5) {
+        const swallow = (ce: MouseEvent) => {
+          ce.stopPropagation();
+          ce.preventDefault();
+          el.removeEventListener('click', swallow, true);
+        };
+        el.addEventListener('click', swallow, true);
+      }
+    };
+
+    el.addEventListener('pointerdown', onPointerDown);
+    el.addEventListener('pointermove', onPointerMove);
+    el.addEventListener('pointerup', onPointerUp);
+    el.addEventListener('pointercancel', onPointerUp);
+    return () => {
+      el.removeEventListener('pointerdown', onPointerDown);
+      el.removeEventListener('pointermove', onPointerMove);
+      el.removeEventListener('pointerup', onPointerUp);
+      el.removeEventListener('pointercancel', onPointerUp);
+    };
+  }, []);
+
+  return (
+    <div className="relative shrink-0 w-full" data-name="Other plans carousel">
+      {/* Header — left-padded to align with normal message gutters; the
+          trailing colon matches the Figma label exactly. */}
+      <div className="px-[16px] pt-[16px] pb-[8px]">
+        <p className="m-0 font-['Graphik:Semibold',sans-serif] text-[16px] leading-[24px] text-black">
+          Other recommended plans:
+        </p>
+      </div>
+      {/* Scroll strip — pl-[16px] for the same left gutter; pr-0 so the
+          second card can extend past the right edge of the chat panel,
+          giving the visible "cut-off" affordance. The 8 px gap between
+          cards matches the Figma layout (card1 ends at x=433, card2
+          starts at x=441 within a 540 px container). */}
+      <div className="pb-[16px]">
+        <div
+          ref={scrollRef}
+          className={`flex gap-[8px] items-start w-full overflow-x-auto overflow-y-hidden pl-[16px] pr-0 touch-pan-y select-none ${
+            isDragging ? 'cursor-grabbing' : 'cursor-grab'
+          }`}
+          style={{
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+            WebkitUserDrag: 'none',
+          } as React.CSSProperties}
+        >
+          <PlanCard
+            tier="Ultimate"
+            hardware="2 Clover Station + 2 Flex + 1 KDS"
+            planLabel="Restaurant Growth Plan"
+            images={[imgStationSolo, imgFlex, imgKds]}
+          />
+          <PlanCard
+            tier="Essential"
+            hardware="2 Clover Minis + 2 Flex"
+            planLabel="Essential Plan"
+            images={[imgMini, imgFlex]}
+          />
+        </div>
+      </div>
+      <div ref={sentinelRef} className="h-px w-full" aria-hidden="true" />
     </div>
   );
 }
@@ -1953,6 +2166,7 @@ function MessageContainer({
       const isTallCard =
         last &&
         (last.recommendation ||
+          last.otherPlansCarousel ||
           last.salesEstimator);
       if (isTallCard) {
         // Look back up to 3 messages for the nearest AI text — that's
@@ -2108,7 +2322,15 @@ function MessageContainer({
             return (
               <div key={index} className="w-full" {...indexProp}>
                 <MessageEnter variant="ai">
-                  <RecommendationCard onBottomReached={onRecBottomReached} />
+                  <RecommendationCard />
+                </MessageEnter>
+              </div>
+            );
+          } else if (message.otherPlansCarousel) {
+            return (
+              <div key={index} className="w-full" {...indexProp}>
+                <MessageEnter variant="ai">
+                  <OtherPlansCarousel onBottomReached={onRecBottomReached} />
                 </MessageEnter>
               </div>
             );
@@ -2491,6 +2713,12 @@ function ChatPanel({
           );
           setTimeout(() => {
             setMessages((prev) => [...prev, { isUser: false, recommendation: true }]);
+            // Follow-up "Other recommended plans" carousel slides in
+            // after the main rec card has had time to settle, so they
+            // read as a sequence rather than a single dump.
+            setTimeout(() => {
+              setMessages((prev) => [...prev, { isUser: false, otherPlansCarousel: true }]);
+            }, 1200);
           }, 900);
         }, 4000);
       }, 400);
@@ -2509,6 +2737,12 @@ function ChatPanel({
           );
           setTimeout(() => {
             setMessages((prev) => [...prev, { isUser: false, recommendation: true }]);
+            // Follow-up "Other recommended plans" carousel slides in
+            // after the main rec card has had time to settle, so they
+            // read as a sequence rather than a single dump.
+            setTimeout(() => {
+              setMessages((prev) => [...prev, { isUser: false, otherPlansCarousel: true }]);
+            }, 1200);
           }, 900);
         }, 1400);
       }, 400);
