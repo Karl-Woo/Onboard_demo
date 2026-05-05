@@ -1,5 +1,5 @@
 import svgPaths from "./svg-6btw9xkm38";
-import imgLandingPageHero from "./LandingPageHero-1.png";
+import heroVideo from "../assets/Clover-Hero-Shoot-Fine-Dining_Table-whitesleeve_16x9_1920x1080.mp4";
 import imgImg from "figma:asset/fe8bd49597a9b5227019480f399e0330b088b9f5.png";
 import imgImg1 from "figma:asset/25b7b0428b2a29eb87421cac7e09c132bf992e85.png";
 import imgImg2 from "figma:asset/24595f8d40f77effd7178741fced67fdc358fa43.png";
@@ -2344,9 +2344,12 @@ export default function HomePageRestaurantsDesktop() {
     <div className="bg-[#ededed] content-stretch flex flex-col items-center relative w-full min-w-[1440px]" data-name="Home_Page_Restaurants_Desktop">
       <div className="content-stretch flex flex-col h-[calc(100vh/var(--design-scale,1))] items-center px-[80px] pt-[160px] relative shrink-0 w-full overflow-hidden" data-name="Module/LandingPageHero">
         <div className="absolute inset-0 w-full h-full">
-          <img
-            src={imgLandingPageHero}
-            alt="Restaurant scene with Clover POS"
+          <video
+            src={heroVideo}
+            autoPlay
+            loop
+            muted
+            playsInline
             className="w-full h-full object-cover"
           />
         </div>

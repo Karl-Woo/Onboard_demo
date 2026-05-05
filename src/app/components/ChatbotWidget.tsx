@@ -46,16 +46,13 @@ const SILKY_SMOOTH = 'cubic-bezier(0.25, 0.46, 0.45, 0.94)';
 // the same kind of motion you get when someone sets down an object.
 const MESSAGE_ENTRY_CURVE = 'cubic-bezier(0.25, 1, 0.5, 1)';
 
-// How long between each word fading in for the typewriter effect.
-// ~55 ms per word reads as "the bot is composing a thought" without feeling
-// artificially slow for longer messages.
-const TYPEWRITER_WORD_DELAY_MS = 55;
+// How long between each word appearing for the streaming effect.
+// ~50 ms per word mimics modern AI token streaming.
+const TYPEWRITER_CHAR_DELAY_MS = 50;
 
 /**
- * Animated text that fades in word-by-word. This is the "chatbot typing"
- * effect — each word slides up 4 px and fades to full opacity, with a
- * staggered delay. Reuse this for any new AI-generated text so the motion
- * pattern stays consistent.
+ * Animated text that streams in word-by-word, mimicking modern AI response
+ * rendering. Each word fades in smoothly without a cursor.
  *
  * - `text`       — the full message
  * - `startDelay` — milliseconds to wait before the first word appears.
@@ -69,25 +66,37 @@ function TypewriterText({
   startDelay?: number;
 }) {
   const words = text.split(' ');
+  const [visibleCount, setVisibleCount] = useState(0);
+  const [started, setStarted] = useState(false);
+
+  useEffect(() => {
+    const startTimer = setTimeout(() => setStarted(true), startDelay);
+    return () => clearTimeout(startTimer);
+  }, [startDelay]);
+
+  useEffect(() => {
+    if (!started) return;
+    if (visibleCount >= words.length) return;
+    const timer = setTimeout(() => {
+      setVisibleCount((c) => c + 1);
+    }, TYPEWRITER_CHAR_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [started, visibleCount, words.length]);
+
   return (
-    <>
-      {words.map((word, i) => (
+    <span>
+      {words.slice(0, visibleCount).map((word, i) => (
         <span
           key={i}
           style={{
-            display: 'inline-block',
-            opacity: 0,
-            animation: `chatbot-word-fade 0.4s ${MESSAGE_ENTRY_CURVE} ${
-              startDelay + i * TYPEWRITER_WORD_DELAY_MS
-            }ms both`,
-            whiteSpace: 'pre',
+            opacity: 1,
+            animation: `chatbot-word-stream 0.3s ease-out both`,
           }}
         >
-          {word}
-          {i < words.length - 1 ? ' ' : ''}
+          {word}{i < visibleCount - 1 ? ' ' : ''}
         </span>
       ))}
-    </>
+    </span>
   );
 }
 
@@ -406,7 +415,7 @@ function WelcomeMessage() {
   const line1 = "\u{1F44B} Hi there! I\u2019m your Clover Assistant.";
   const line2 =
     "Let\u2019s find the best POS solution for you. What\u2019s your business name, city, and state?";
-  const line1WordCount = line1.split(/\s+/).length; // ~7 words
+  const line1WordCount = line1.split(' ').length;
 
   return (
     <div className="relative shrink-0 w-full" data-name="AI assistant">
@@ -419,7 +428,7 @@ function WelcomeMessage() {
             <p className="m-0 mt-[24px]">
               <TypewriterText
                 text={line2}
-                startDelay={300 + line1WordCount * TYPEWRITER_WORD_DELAY_MS + 200}
+                startDelay={300 + line1WordCount * TYPEWRITER_CHAR_DELAY_MS + 200}
               />
             </p>
           </div>
@@ -920,8 +929,8 @@ function LocationsResponse({ businessName, cityState, locations }: { businessNam
           <div className="content-stretch flex flex-col gap-[16px] items-end p-[16px] relative w-full">
             <p className="font-['Graphik:Regular'] min-w-full not-italic relative shrink-0 text-black w-[min-content] leading-[24px] text-[16px]">
               {segments.map((seg, i) => {
-                const startDelay = 300 + runningWordCount * TYPEWRITER_WORD_DELAY_MS;
-                runningWordCount += seg.text.trim().split(/\s+/).filter(Boolean).length;
+                const startDelay = 300 + runningWordCount * TYPEWRITER_CHAR_DELAY_MS;
+                runningWordCount += seg.text.trim().split(' ').filter(Boolean).length;
                 const weightClass = seg.weight === 'medium' ? "font-['Graphik:Medium']" : '';
                 return (
                   <span key={i} className={weightClass}>
@@ -1896,10 +1905,21 @@ function MessageContainer({
   onSalesInstead: () => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const prevMessagesRef = useRef(messages);
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
+
+    const prevMessages = prevMessagesRef.current;
+    prevMessagesRef.current = messages;
+
+    // Don't scroll when the only change was removing messages (e.g. skip
+    // chip filtered out). Detect by checking if the last message is the
+    // same object reference — if so, nothing new appeared at the end.
+    const prevLast = prevMessages[prevMessages.length - 1];
+    const currLast = messages[messages.length - 1];
+    if (currLast && currLast === prevLast && messages.length <= prevMessages.length) return;
 
     // Scroll strategy: anchor on the "first visible message of this
     // response block" rather than always the latest message.
@@ -1927,11 +1947,13 @@ function MessageContainer({
       // SalesConnectCard (~100 px) is NOT in this list — it should
       // scroll to the bottom normally so the user sees it immediately
       // rather than being sent back to the recommendation section.
+      // FileUploadCard is also excluded — it's not tall enough to need
+      // anchoring, and re-anchoring after image upload causes an
+      // unwanted scroll jump.
       const isTallCard =
         last &&
         (last.recommendation ||
-          last.salesEstimator ||
-          last.fileUploadCard);
+          last.salesEstimator);
       if (isTallCard) {
         // Look back up to 3 messages for the nearest AI text — that's
         // the intro line of the current response block.
@@ -2748,8 +2770,8 @@ function ChatbotAnimations() {
           transform: translate(0, 0) scale(1);
         }
       }
-      /* Word-by-word reveal for AI text. Each word fades up 4 px. */
-      @keyframes chatbot-word-fade {
+      /* Word-by-word stream for modern AI response feel */
+      @keyframes chatbot-word-stream {
         0% {
           opacity: 0;
           transform: translateY(4px);
