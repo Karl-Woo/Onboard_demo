@@ -48,24 +48,24 @@ function ExternalLinkIcon({ color }: { color: string }) {
   );
 }
 
-function PiggyBankIcon() {
+function DollarBillIcon() {
   return (
     <svg
-      className="size-[42px]"
-      viewBox="0 0 42 42"
+      className="w-[42px] h-[22px]"
+      viewBox="0 0 42 22"
       fill="none"
       aria-hidden="true"
     >
       <path
-        d="M22.2014 10.9595C23.6839 9.99973 24.6668 8.31775 24.6668 6.40319C24.6668 3.41909 22.279 1 19.3334 1C16.3878 1 14 3.41909 14 6.40319C14 8.41595 15.0863 10.1717 16.6974 11.1014"
-        stroke="#228800"
+        d="M24.6936 12.9465C25.1536 14.0949 26.4143 14.5171 27.1228 14.4819C28.2357 14.4819 29.3766 13.9663 29.3766 12.5951C29.3766 11.616 29.062 10.7151 27.1267 10.7095C25.3909 10.7044 24.7764 9.67704 24.7764 8.82146C24.7764 7.20449 26.1565 6.93464 27.1267 6.93464M27.1267 6.93464C28.6649 6.93464 29.0622 7.68521 29.3766 8.43719M27.1267 6.93464L27.1267 6M27.1271 14.4822L27.1271 15.5M15.6177 21H38.3823C39.828 21 41 19.4682 41 17.5787V4.42128C41 2.53176 39.828 1 38.3823 1H15.6177C14.172 1 13 2.53176 13 4.42128V17.5787C13 19.4682 14.172 21 15.6177 21Z"
+        stroke="black"
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <path
-        d="M41 17.6714C41 20.7029 38.6122 23.1605 35.6667 23.1605M35.6667 23.1605C35.6239 27.5393 33.6644 31.6648 30.3333 34.3893V39.6277C30.3333 40.3856 29.7364 41 29 41H26.3333C25.597 41 25 40.3856 25 39.6277V37.3772C21.5354 38.555 17.7937 38.548 14.3333 37.3571V39.6277C14.3333 40.3856 13.7364 41 13 41H10.3333C9.59695 41 9 40.3856 9 39.6277V34.3619C7.55881 33.1546 6.34728 31.6831 5.42667 30.0218H1V19.0437H4.28889C4.91181 16.9232 5.99098 14.9745 7.44622 13.3423L6.56641 7.01619C6.69184 6.94874 9.80179 7.01619 11 8.74478M35.6667 23.1605C35.6029 18.1703 33.0892 13.5524 28.9876 10.8905M14.3333 12.3464C17.6943 10.6612 21.639 10.6612 25 12.3464M11 20.4508L10.3333 21.1261L11 21.8015L11.6667 21.1261L11 20.4508Z"
-        stroke="black"
+        d="M9 6H5.30266M1 14H3.69734M7.67865 9.94511H2.9813M2.39459 6H2.3209M7.47689 14H8.46768"
+        stroke="#228800"
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -183,8 +183,8 @@ export default function PurchaseCompletePage() {
                 </p>
                 <p className="font-['Graphik:Regular',sans-serif] leading-[24px] text-[16px] text-[#5a5a5a] m-0 w-full">
                   You&rsquo;ll receive a welcome email with your Clover account
-                  details, and your preferred payment method will be charged for
-                  the devices you ordered.
+                  details. Your preferred payment method will be charged for the
+                  devices you ordered.
                 </p>
               </div>
               <div className="flex gap-[16px] items-start">
@@ -294,9 +294,9 @@ export default function PurchaseCompletePage() {
           </p>
           <div className="flex gap-[24px] items-stretch w-full">
             <OfferCard
-              icon={<PiggyBankIcon />}
-              title="Clover Rapid Deposit"
-              description="Get your money on demand. Day or night, weekends or holidays, Clover Rapid Deposit instantly transfers funds from your card sales to keep your cash flow strong."
+              icon={<DollarBillIcon />}
+              title="Rapid Deposit"
+              description="Get your money on demand. Day or night, weekends or holidays, Rapid Deposit instantly transfers funds from your card sales to keep your cash flow strong."
             />
             <OfferCard
               icon={<BankIcon />}
@@ -305,8 +305,8 @@ export default function PurchaseCompletePage() {
             />
             <OfferCard
               icon={<HandCardIcon />}
-              title="Clover Gift Card"
-              description="Drive customer loyalty by attracting more foot traffic, engaging your customers, and boosting brand awareness with Clover Gift Cards"
+              title="Gift cards"
+              description="Drive customer loyalty by attracting more foot traffic, engaging your customers, and boosting brand awareness with Gift cards from Clover."
             />
           </div>
         </div>
