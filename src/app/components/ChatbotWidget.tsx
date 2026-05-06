@@ -382,16 +382,6 @@ interface Message {
   // When true, this renders the "Call Jason" sales connect card
   // (Figma 1:9928).
   salesConnectCard?: boolean;
-  // When true, renders the follow-up "I'm ready to buy this setup."
-  // single chip shown AFTER the user picked "Connect me to sales." and
-  // saw the Call Jason card. Clicking it navigates to checkout, the
-  // same destination as "Looks good. Buy this setup."
-  buyReadyChip?: boolean;
-  // When true, renders the follow-up "I need to talk to sales instead."
-  // single chip shown the next time the chat re-opens after the user
-  // picked "Looks good. Buy this setup." Clicking it surfaces the
-  // Call Jason card in the same flow as the original connect chip.
-  salesInsteadChip?: boolean;
 }
 
 interface LocationOption {
@@ -1416,145 +1406,48 @@ function ActionBubble({
  */
 function PostRecChipPair({
   connectClicked,
-  buyClicked,
   onConnect,
-  onBuyClick,
 }: {
   connectClicked: boolean;
-  buyClicked: boolean;
   onConnect: () => void;
-  onBuyClick: () => void;
 }) {
-  // Mutually-exclusive follow-up: whichever chip the user picked stays
-  // visible in its clicked (grey) state, the other disappears so the
-  // conversation keeps moving.
-  //   - connectClicked → buy chip removed, connect chip shows clicked.
-  //   - buyClicked     → connect chip removed, buy chip shows clicked.
-  //   - neither        → both chips visible and interactive.
-  const chips = [];
-  if (!connectClicked) {
-    chips.push({
-      id: 'buy',
-      text: 'Looks good. Buy this setup.',
-      interactive: !buyClicked,
-      isClicked: buyClicked,
-      onClick: onBuyClick,
-    });
-  }
-  if (!buyClicked) {
-    chips.push({
-      id: 'connect',
-      text: 'Connect me to sales.',
-      interactive: !connectClicked,
-      isClicked: connectClicked,
-      onClick: onConnect,
-    });
-  }
-  if (!buyClicked && !connectClicked) {
-    chips.push({
-      id: 'options',
-      text: 'Show me more options',
-      interactive: false,
-      isClicked: false,
-      onClick: () => {},
-    });
-  }
-
-  const dataNameById: Record<string, string> = {
-    buy: 'Buy bubble',
-    connect: 'Connect bubble',
-    options: 'Options bubble',
-  };
-
+  // Now that the recommendation card itself has its own Buy CTA, the
+  // post-rec follow-up is simplified to a single "Connect me to sales."
+  // chip plus a short AI-message paragraph above it explaining the user's
+  // options. Matches Figma 40000778:7520. The Connect chip stays visible
+  // throughout the flow (default → clicked) — there is no separate
+  // "I need to talk to sales instead." follow-up.
   return (
     <div
-      className="w-full px-[16px] pt-[8px] pb-[16px] flex flex-col items-end gap-[8px] shrink-0"
+      className="w-full flex flex-col shrink-0"
       data-name="Post rec chips"
     >
-      {chips.map((chip, i) => (
-        <div
-          key={chip.id}
-          className="flex w-full justify-end"
-          style={{
-            // Staggered entry per chip — same curve/delay as SuggestionChips.
-            animation: `chatbot-msg-enter-ai 0.55s ${MESSAGE_ENTRY_CURVE} ${
-              i * 90
-            }ms both`,
-            transformOrigin: 'bottom right',
-          }}
-          data-name={dataNameById[chip.id]}
-        >
-          <ChipButtonContent
-            text={chip.text}
-            isClicked={chip.isClicked}
-            interactive={chip.interactive}
-            onClick={chip.onClick}
-          />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-/**
- * SingleChip — one green-outlined chip aligned to the right, wrapped in the
- * same `p-16` bubble spacing used by AI messages. Reuses `ChipButtonContent`
- * for the clicked/hover/focus states so the follow-up chips ("I'm ready to
- * buy this setup.", "I need to talk to sales instead.") share visual
- * language with the PostRecChipPair that came before them.
- */
-function SingleChip({
-  text,
-  isClicked,
-  onClick,
-  dataName,
-  optionsCompanion = false,
-}: {
-  text: string;
-  isClicked: boolean;
-  onClick: () => void;
-  dataName: string;
-  // When true, renders a non-interactive "Show me other options" chip below
-  // the main chip. Hidden once `isClicked` flips, mirroring the behavior of
-  // the third chip in `PostRecChipPair`.
-  optionsCompanion?: boolean;
-}) {
-  const showCompanion = optionsCompanion && !isClicked;
-  return (
-    <div
-      className={`w-full px-[16px] pt-[8px] pb-[16px] flex flex-col items-end shrink-0${
-        showCompanion ? ' gap-[8px]' : ''
-      }`}
-      data-name={dataName}
-    >
       <div
-        className="flex w-full justify-end"
-        style={{ transformOrigin: 'bottom right' }}
+        className="p-[16px] w-full"
+        style={{
+          animation: `chatbot-msg-enter-ai 0.55s ${MESSAGE_ENTRY_CURVE} both`,
+          transformOrigin: 'top left',
+        }}
+      >
+        <p className="m-0 font-['Graphik:Regular',sans-serif] text-[16px] leading-[24px] text-black">
+          I&rsquo;ve come up with a recommended plan but also have two additional plans you might prefer. Use the Buy buttons to pick the one that you like or I can help you by connecting you to sales.
+        </p>
+      </div>
+      <div
+        className="w-full px-[16px] pb-[16px] flex justify-end"
+        data-name="Connect bubble"
+        style={{
+          animation: `chatbot-msg-enter-ai 0.55s ${MESSAGE_ENTRY_CURVE} 90ms both`,
+          transformOrigin: 'bottom right',
+        }}
       >
         <ChipButtonContent
-          text={text}
-          isClicked={isClicked}
-          interactive={!isClicked}
-          onClick={onClick}
+          text="Connect me to sales."
+          isClicked={connectClicked}
+          interactive={!connectClicked}
+          onClick={onConnect}
         />
       </div>
-      {showCompanion && (
-        <div
-          className="flex w-full justify-end"
-          style={{
-            animation: `chatbot-msg-enter-ai 0.55s ${MESSAGE_ENTRY_CURVE} 90ms both`,
-            transformOrigin: 'bottom right',
-          }}
-          data-name="Options bubble"
-        >
-          <ChipButtonContent
-            text="Show me other options"
-            isClicked={false}
-            interactive={false}
-            onClick={() => {}}
-          />
-        </div>
-      )}
     </div>
   );
 }
@@ -1659,8 +1552,12 @@ function SalesConnectCard() {
 
 function RecommendationCard({
   onBottomReached,
+  onBuyClick,
+  buyClicked,
 }: {
   onBottomReached?: () => void;
+  onBuyClick?: () => void;
+  buyClicked?: boolean;
 }) {
   // Observe the bottom sentinel — when it enters the scroll container's
   // viewport, fire `onBottomReached` once. This is how we know the user
@@ -1736,7 +1633,7 @@ function RecommendationCard({
               Clover Station + Flex
             </p>
             <p className="font-['Graphik:Regular',sans-serif] text-[14px] leading-[20px] w-full m-0">
-              For your 2 locations, we recommend 1 Station for the counter and 2 Flex devices for tableside service per location.
+              Based on your 2 locations, we suggest 1 Station for the counter and 2 Flex for tableside service per location.
             </p>
           </div>
 
@@ -1848,12 +1745,92 @@ function RecommendationCard({
             ))}
           </div>
 
-          {/* See plan details CTA */}
-          <p className="font-['Graphik:Medium',sans-serif] text-[14px] leading-[20px] text-[#228800] text-center whitespace-nowrap m-0">
-            See plan details
-          </p>
+          {/* Learn more + Buy button row. Per Figma 40000778:8853 — two
+              equal-width buttons. Learn more is the secondary outline
+              variant; Buy is the filled green primary with a trailing
+              arrow icon. Only the Buy button on this large card actually
+              fires `onBuyClick` (which navigates to checkout). The Learn
+              more button is hover-only — it has no onClick. */}
+          <CardCtaRow
+            primaryDisabled={buyClicked}
+            onPrimaryClick={onBuyClick}
+          />
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * CardCtaRow — shared two-button footer used by both the large
+ * RecommendationCard and the smaller PlanCards in the Other plans
+ * carousel. Matches Figma node 40000778:8853 (Learn more secondary +
+ * Buy primary with trailing arrow). Pass `onPrimaryClick` to make the
+ * Buy button clickable; omit it to make the button hover-only.
+ */
+function CardCtaRow({
+  onPrimaryClick,
+  primaryDisabled,
+}: {
+  onPrimaryClick?: () => void;
+  primaryDisabled?: boolean;
+}) {
+  const [secondaryHover, setSecondaryHover] = useState(false);
+  const [primaryHover, setPrimaryHover] = useState(false);
+  return (
+    <div className="flex gap-[12px] items-center justify-center w-full">
+      {/* Learn more — secondary outline button. Hover-only; no onClick.
+          Hover state per Figma 40000780:8433 — gray (#f5f5f5) fill,
+          darker green (#25790b) border + label. */}
+      <button
+        type="button"
+        onMouseEnter={() => setSecondaryHover(true)}
+        onMouseLeave={() => setSecondaryHover(false)}
+        className="flex-1 min-w-[100px] flex gap-[8px] items-center justify-center px-[16px] py-[12px] rounded-[8px] border border-solid cursor-pointer transition-colors duration-150"
+        style={{
+          background: secondaryHover ? '#f5f5f5' : '#ffffff',
+          borderColor: secondaryHover ? '#25790b' : '#727272',
+        }}
+      >
+        <span
+          className="font-['Graphik:Medium',sans-serif] text-[16px] leading-[24px] text-center whitespace-nowrap transition-colors duration-150"
+          style={{ color: secondaryHover ? '#25790b' : '#228800' }}
+        >
+          Learn more
+        </span>
+      </button>
+      {/* Buy — primary filled green button with trailing arrow. */}
+      <button
+        type="button"
+        onClick={onPrimaryClick}
+        disabled={primaryDisabled}
+        onMouseEnter={() => setPrimaryHover(true)}
+        onMouseLeave={() => setPrimaryHover(false)}
+        className={`flex-1 min-w-[100px] flex gap-[8px] items-center justify-center px-[16px] py-[12px] rounded-[8px] border-0 transition-colors duration-150 ${
+          onPrimaryClick && !primaryDisabled ? 'cursor-pointer' : 'cursor-default'
+        } disabled:opacity-60`}
+        style={{
+          background: primaryHover ? '#1c6b00' : '#228800',
+        }}
+      >
+        <span className="font-['Graphik:Medium',sans-serif] text-[16px] leading-[24px] text-white text-center whitespace-nowrap">
+          Buy
+        </span>
+        <svg
+          className="size-[24px] shrink-0"
+          viewBox="0 0 24 24"
+          fill="none"
+          aria-hidden="true"
+        >
+          <path
+            d="M5 12h14M13 6l6 6-6 6"
+            stroke="#ffffff"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </button>
     </div>
   );
 }
@@ -1913,9 +1890,10 @@ function PlanCard({
           </div>
         ))}
       </div>
-      <p className="m-0 font-['Graphik:Medium',sans-serif] text-[14px] leading-[20px] text-[#228800] text-center cursor-pointer">
-        See plan details
-      </p>
+      {/* Learn more + Buy buttons — both hover-only on the smaller plan
+          cards. No onClick is wired so the Buy button does nothing
+          functional, matching the spec. */}
+      <CardCtaRow />
     </div>
   );
 }
@@ -1954,16 +1932,22 @@ function OtherPlansCarousel({
     return () => observer.disconnect();
   }, [onBottomReached]);
 
-  // Vertical wheel → horizontal scroll (mirrors LocationsResponse).
+  // Vertical wheel → horizontal scroll (mirrors LocationsResponse). Once
+  // we've reached the right edge, stop hijacking the wheel — the event
+  // bubbles up so the parent message container resumes vertical scroll.
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
     const handler = (e: WheelEvent) => {
       if (el.scrollWidth <= el.clientWidth) return;
-      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-        e.preventDefault();
-        el.scrollLeft += e.deltaY;
-      }
+      if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+      const atRightEdge = el.scrollLeft + el.clientWidth >= el.scrollWidth - 1;
+      // Scrolling down past the right edge → let the page scroll instead.
+      if (atRightEdge && e.deltaY > 0) return;
+      // Scrolling up past the left edge → let the page scroll up instead.
+      if (el.scrollLeft <= 0 && e.deltaY < 0) return;
+      e.preventDefault();
+      el.scrollLeft += e.deltaY;
     };
     el.addEventListener('wheel', handler, { passive: false });
     return () => el.removeEventListener('wheel', handler);
@@ -2034,15 +2018,15 @@ function OtherPlansCarousel({
           Other recommended plans:
         </p>
       </div>
-      {/* Scroll strip — pl-[16px] for the same left gutter; pr-0 so the
-          second card can extend past the right edge of the chat panel,
-          giving the visible "cut-off" affordance. The 8 px gap between
-          cards matches the Figma layout (card1 ends at x=433, card2
-          starts at x=441 within a 540 px container). */}
+      {/* Scroll strip — pl-[16px] gives the same left gutter as other
+          chat content. pr-[16px] adds a matching right gutter so the
+          second card has breathing room when scrolled to the end. The
+          8 px gap between cards matches the Figma layout (card1 ends at
+          x=433, card2 starts at x=441 within a 540 px container). */}
       <div className="pb-[16px]">
         <div
           ref={scrollRef}
-          className={`flex gap-[8px] items-start w-full overflow-x-auto overflow-y-hidden pl-[16px] pr-0 touch-pan-y select-none ${
+          className={`flex gap-[8px] items-start w-full overflow-x-auto overflow-y-hidden px-[16px] touch-pan-y select-none ${
             isDragging ? 'cursor-grabbing' : 'cursor-grab'
           }`}
           style={{
@@ -2081,8 +2065,6 @@ function MessageContainer({
   skipClicked,
   connectClicked,
   buyClicked,
-  buyReadyClicked,
-  salesInsteadClicked,
   onIntroChipSelect,
   onSuggestionSelect,
   onContinue,
@@ -2091,8 +2073,6 @@ function MessageContainer({
   onConnect,
   onRecBottomReached,
   onBuyClick,
-  onBuyReady,
-  onSalesInstead,
 }: {
   messages: Message[];
   showWelcome: boolean;
@@ -2104,8 +2084,6 @@ function MessageContainer({
   skipClicked: boolean;
   connectClicked: boolean;
   buyClicked: boolean;
-  buyReadyClicked: boolean;
-  salesInsteadClicked: boolean;
   onIntroChipSelect: (text: string) => void;
   onSuggestionSelect: (text: string) => void;
   onContinue: () => void;
@@ -2114,8 +2092,6 @@ function MessageContainer({
   onConnect: () => void;
   onRecBottomReached: () => void;
   onBuyClick: () => void;
-  onBuyReady: () => void;
-  onSalesInstead: () => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const prevMessagesRef = useRef(messages);
@@ -2322,7 +2298,10 @@ function MessageContainer({
             return (
               <div key={index} className="w-full" {...indexProp}>
                 <MessageEnter variant="ai">
-                  <RecommendationCard />
+                  <RecommendationCard
+                    onBuyClick={onBuyClick}
+                    buyClicked={buyClicked}
+                  />
                 </MessageEnter>
               </div>
             );
@@ -2339,38 +2318,8 @@ function MessageContainer({
               <div key={index} className="w-full" {...indexProp}>
                 <PostRecChipPair
                   connectClicked={connectClicked}
-                  buyClicked={buyClicked}
                   onConnect={onConnect}
-                  onBuyClick={onBuyClick}
                 />
-              </div>
-            );
-          } else if (message.buyReadyChip) {
-            return (
-              <div key={index} className="w-full" {...indexProp}>
-                <MessageEnter variant="ai">
-                  <SingleChip
-                    text="I'm ready to buy this setup."
-                    isClicked={buyReadyClicked}
-                    onClick={onBuyReady}
-                    dataName="Buy ready chip"
-                    optionsCompanion
-                  />
-                </MessageEnter>
-              </div>
-            );
-          } else if (message.salesInsteadChip) {
-            return (
-              <div key={index} className="w-full" {...indexProp}>
-                <MessageEnter variant="ai">
-                  <SingleChip
-                    text="I need to talk to sales instead."
-                    isClicked={salesInsteadClicked}
-                    onClick={onSalesInstead}
-                    dataName="Sales instead chip"
-                    optionsCompanion
-                  />
-                </MessageEnter>
               </div>
             );
           } else if (message.salesConnectCard) {
@@ -2563,17 +2512,10 @@ function ChatPanel({
   const [skipClicked, setSkipClicked] = useState(false);
   const [postRecShown, setPostRecShown] = useState(false);
   const [connectClicked, setConnectClicked] = useState(false);
-  // Follow-up chip state for the mutually-exclusive choice between
-  // "Looks good. Buy this setup." and "Connect me to sales." — once one
-  // is picked, the other disappears, and a matching cross-over chip
-  // appears so the user can still reach the other destination.
+  // Tracks whether the user has clicked Buy on the recommendation card.
+  // Used to disable repeat clicks during the 700 ms transition before the
+  // chat closes and the page navigates to checkout.
   const [buyClicked, setBuyClicked] = useState(false);
-  const [buyReadyClicked, setBuyReadyClicked] = useState(false);
-  const [salesInsteadClicked, setSalesInsteadClicked] = useState(false);
-  // Whether we've already pushed the "I need to talk to sales instead."
-  // chip message on reopen — guards against re-adding it every time the
-  // chat panel opens.
-  const [salesInsteadPushed, setSalesInsteadPushed] = useState(false);
   // Welcome message is mounted lazily — the first time the chat opens we
   // flip this on so the MessageEnter intro animation plays as the chat
   // appears, not at widget mount time (when the user can't see it).
@@ -2814,25 +2756,20 @@ function ChatPanel({
   };
 
   // "Connect me to sales." click — transforms the Connect chip in place
-  // into its Sent state, reveals the Call Jason sales connect card, and
-  // then surfaces a follow-up "I'm ready to buy this setup." chip so
-  // the user can still reach the checkout page without starting over.
+  // into its Sent state and reveals the Call Jason sales connect card.
+  // The user can still reach checkout via the recommendation card's Buy
+  // CTA, so no follow-up "I'm ready to buy this setup." chip is needed.
   const handleConnect = () => {
     if (connectClicked) return;
     setConnectClicked(true);
     setTimeout(() => {
       setMessages((prev) => [...prev, { isUser: false, salesConnectCard: true }]);
-      setTimeout(() => {
-        setMessages((prev) => [...prev, { isUser: false, buyReadyChip: true }]);
-      }, 900);
     }, 500);
   };
 
-  // "Looks good. Buy this setup." click — flips the chip to its clicked
-  // state (which also removes the connect chip via PostRecChipPair's
-  // conditional), then closes the chat and navigates to checkout. The
-  // short delay lets the user see the transition before the panel
-  // starts its shrink animation.
+  // Buy CTA on the recommendation card — disables itself for 700 ms so
+  // the user sees the disabled state while the page transitions to
+  // checkout.
   const handleBuyClick = () => {
     if (buyClicked) return;
     setBuyClicked(true);
@@ -2840,60 +2777,6 @@ function ChatPanel({
       onBuySetup();
     }, 700);
   };
-
-  // "I'm ready to buy this setup." follow-up chip (shown after picking
-  // Connect me to sales). Same destination as handleBuyClick, with the
-  // same visual transition.
-  const handleBuyReady = () => {
-    if (buyReadyClicked) return;
-    setBuyReadyClicked(true);
-    setTimeout(() => {
-      onBuySetup();
-    }, 700);
-  };
-
-  // "I need to talk to sales instead." follow-up chip (shown when the
-  // chat reopens after the user picked Buy). Flips the chip to clicked
-  // and reveals the Call Jason card, same as the original connect flow.
-  const handleSalesInstead = () => {
-    if (salesInsteadClicked) return;
-    setSalesInsteadClicked(true);
-    setTimeout(() => {
-      setMessages((prev) => [...prev, { isUser: false, salesConnectCard: true }]);
-    }, 500);
-  };
-
-  // When the chat reopens AFTER the user picked Buy (path A), surface
-  // the "I need to talk to sales instead." chip so they can still reach
-  // the sales card.
-  //
-  // The `hasClosedSinceBuyRef` latch guards against firing while the chat
-  // is still open during the buy→checkout transition. `handleBuyClick`
-  // waits 700 ms before closing the panel, which is longer than this
-  // effect's 500 ms delay — without the latch the chip would pop in
-  // before the panel finished shrinking. We only push the chip the next
-  // time `isOpen` flips to true *after* the panel has actually been
-  // closed since `buyClicked` went true.
-  const hasClosedSinceBuyRef = useRef(false);
-  useEffect(() => {
-    if (!isOpen && buyClicked) {
-      hasClosedSinceBuyRef.current = true;
-    }
-  }, [isOpen, buyClicked]);
-  useEffect(() => {
-    if (
-      isOpen &&
-      buyClicked &&
-      !salesInsteadPushed &&
-      hasClosedSinceBuyRef.current
-    ) {
-      const timer = setTimeout(() => {
-        setMessages((prev) => [...prev, { isUser: false, salesInsteadChip: true }]);
-        setSalesInsteadPushed(true);
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [isOpen, buyClicked, salesInsteadPushed]);
 
   return (
     <div
@@ -2933,8 +2816,6 @@ function ChatPanel({
         skipClicked={skipClicked}
         connectClicked={connectClicked}
         buyClicked={buyClicked}
-        buyReadyClicked={buyReadyClicked}
-        salesInsteadClicked={salesInsteadClicked}
         onIntroChipSelect={(text) => handleSend(text)}
         onSuggestionSelect={handleSuggestionSelect}
         onContinue={handleContinue}
@@ -2943,8 +2824,6 @@ function ChatPanel({
         onConnect={handleConnect}
         onRecBottomReached={handleRecBottomReached}
         onBuyClick={handleBuyClick}
-        onBuyReady={handleBuyReady}
-        onSalesInstead={handleSalesInstead}
       />
       <ChatMessageField value={inputValue} onChange={setInputValue} onSend={handleSend} onKeyPress={handleKeyPress} />
     </div>
