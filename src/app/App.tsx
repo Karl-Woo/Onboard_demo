@@ -1,6 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import HomePageRestaurantsDesktop from '../imports/HomePageRestaurantsDesktop';
 import BuyThisSetupPage from './components/BuyThisSetupPage';
+import ProcessingPage from './components/ProcessingPage';
+import PurchaseCompletePage from './components/PurchaseCompletePage';
 import { ChatbotWidget } from './components/ChatbotWidget';
 
 // Design width from Figma. The component is authored at this width with
@@ -9,7 +11,7 @@ import { ChatbotWidget } from './components/ChatbotWidget';
 const DESIGN_WIDTH = 1440;
 const MIN_SUPPORTED_WIDTH = 768;
 
-type Page = 'home' | 'checkout';
+type Page = 'home' | 'checkout' | 'processing' | 'complete';
 
 export default function App() {
   const contentRef = useRef<HTMLDivElement>(null);
@@ -83,7 +85,15 @@ export default function App() {
             : undefined
         }
       >
-        {page === 'home' ? <HomePageRestaurantsDesktop /> : <BuyThisSetupPage />}
+        {page === 'home' ? (
+          <HomePageRestaurantsDesktop />
+        ) : page === 'checkout' ? (
+          <BuyThisSetupPage onCheckout={() => setPage('processing')} />
+        ) : page === 'processing' ? (
+          <ProcessingPage onDone={() => setPage('complete')} />
+        ) : (
+          <PurchaseCompletePage />
+        )}
       </div>
       {/*
         The chatbot widget is rendered outside the transformed wrapper so
@@ -97,7 +107,7 @@ export default function App() {
         ChatButton, matching Figma node 40000383:6971.
       */}
       <ChatbotWidget
-        collapseOnly={page === 'checkout'}
+        collapseOnly={page !== 'home'}
         onBuySetup={() => setPage('checkout')}
       />
     </div>

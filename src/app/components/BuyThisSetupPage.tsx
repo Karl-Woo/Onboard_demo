@@ -11,84 +11,8 @@
 import imgStationDuo from "@/assets/station.png";
 import imgFlex from "@/assets/flex.png";
 import imgRestaurantGrowth from "@/assets/restaurant growth.png";
-import cloverLogoSvg from "@/assets/Clover green.svg";
 import paymentMethodsSvg from "@/assets/Frame 5908.svg";
-
-function CartIcon() {
-  return (
-    <svg
-      className="size-[24px]"
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden="true"
-    >
-      <path
-        d="M3 4h2l2.6 12.4a2 2 0 0 0 2 1.6h8.8a2 2 0 0 0 2-1.5L22 8H6"
-        stroke="black"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <circle cx="10" cy="20" r="1.4" stroke="black" strokeWidth="1.5" />
-      <circle cx="18" cy="20" r="1.4" stroke="black" strokeWidth="1.5" />
-    </svg>
-  );
-}
-
-function NavigationPrimary() {
-  return (
-    <div
-      className="border-[#ededed] border-b border-solid flex h-[80px] items-center justify-between px-[80px] relative w-full bg-white"
-      data-name="Navigation/Primary"
-    >
-      {/* Left links */}
-      <div className="flex h-[46px] items-center">
-        <div className="flex gap-[24px] h-[24px] items-center">
-          {['Food & beverage', 'Services', 'Retail', 'Products', 'Resources'].map(
-            (label) => (
-              <p
-                key={label}
-                className="font-['Altform:SemiBold',sans-serif] leading-[1.57] text-[14px] text-black whitespace-nowrap m-0"
-              >
-                {label}
-              </p>
-            ),
-          )}
-        </div>
-      </div>
-
-      {/* Right links + Contact us CTA */}
-      <div className="flex gap-[16px] items-center justify-end">
-        {['Log In', 'Support', 'Pricing', 'Shop'].map((label) => (
-          <p
-            key={label}
-            className="font-['Altform:SemiBold',sans-serif] leading-[1.57] text-[14px] text-black whitespace-nowrap m-0"
-          >
-            {label}
-          </p>
-        ))}
-        <div className="size-[32px] flex items-center justify-center">
-          <CartIcon />
-        </div>
-        <div
-          className="bg-[#b6fb6f] border border-[#333] border-solid flex h-[48px] items-center justify-center overflow-hidden rounded-[8px] w-[119px]"
-          data-name="Contact us"
-        >
-          <p className="font-['Altform:SemiBold',sans-serif] leading-[1.71] text-[14px] text-[#333] text-center whitespace-nowrap m-0">
-            Contact us
-          </p>
-        </div>
-      </div>
-
-      {/* Center logo */}
-      <img
-        src={cloverLogoSvg}
-        alt="Clover"
-        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 size-[24px]"
-      />
-    </div>
-  );
-}
+import { NavigationPrimary } from './NavigationPrimary';
 
 function QtyDropdown({ value }: { value: number }) {
   return (
@@ -223,7 +147,11 @@ function PromoBanner() {
   );
 }
 
-function OrderSummaryCard() {
+function OrderSummaryCard({
+  onCheckout,
+}: {
+  onCheckout: () => void;
+}) {
   return (
     <div
       className="bg-white flex flex-col gap-[24px] items-center p-[24px] rounded-[16px] shadow-[0px_2px_4px_0px_rgba(0,0,0,0.16)] w-full"
@@ -258,6 +186,7 @@ function OrderSummaryCard() {
       {/* Checkout button */}
       <button
         type="button"
+        onClick={onCheckout}
         className="bg-[#228800] flex gap-[8px] items-center justify-center min-w-[100px] overflow-hidden px-[16px] py-[12px] rounded-[8px] w-full border-0 cursor-pointer hover:bg-[#1d7300] transition-colors"
       >
         <p className="font-['Graphik:Medium',sans-serif] leading-[24px] text-white text-[16px] text-center whitespace-nowrap m-0">
@@ -275,7 +204,15 @@ function OrderSummaryCard() {
   );
 }
 
-export default function BuyThisSetupPage() {
+export default function BuyThisSetupPage({
+  onCheckout,
+}: {
+  onCheckout?: () => void;
+}) {
+  const handleCheckout = () => {
+    onCheckout?.();
+  };
+
   // `--design-scale` is set by App.tsx to the scale-factor applied to the
   // 1440 px authored layout on sub-1440 viewports. Dividing 100vh by it
   // means the authored page height compensates for the CSS scale, so the
@@ -353,7 +290,7 @@ export default function BuyThisSetupPage() {
 
         {/* Right column: order summary */}
         <div className="w-full md:w-2/5 lg:max-w-[405px] mt-[40px] md:mt-0 md:sticky md:top-[60px]">
-          <OrderSummaryCard />
+          <OrderSummaryCard onCheckout={handleCheckout} />
         </div>
       </div>
     </div>
