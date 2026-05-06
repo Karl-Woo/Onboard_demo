@@ -138,13 +138,13 @@ function OfferCard({
   description: string;
 }) {
   return (
-    <div className="bg-white border border-[#e5e5e5] border-solid flex flex-1 flex-col gap-[24px] items-center justify-center min-w-px overflow-hidden p-[24px] rounded-[16px]">
+    <div className="bg-white border border-[#e5e5e5] border-solid flex flex-1 flex-col items-center min-w-px overflow-hidden p-[24px] rounded-[16px]">
       <div className="flex items-center w-full">
         <div className="size-[56px] flex items-center justify-center">
           {icon}
         </div>
       </div>
-      <div className="flex flex-col gap-[8px] items-start w-full">
+      <div className="flex flex-1 flex-col gap-[8px] items-start w-full pt-[24px]">
         <p className="font-['Graphik:Semibold',sans-serif] leading-[32px] text-[24px] text-black m-0 w-full">
           {title}
         </p>
@@ -152,7 +152,7 @@ function OfferCard({
           {description}
         </p>
       </div>
-      <p className="font-['Graphik:Medium',sans-serif] leading-[20px] text-[#228800] text-[14px] text-center whitespace-nowrap m-0 cursor-pointer">
+      <p className="font-['Graphik:Medium',sans-serif] leading-[20px] text-[#228800] text-[14px] text-center whitespace-nowrap m-0 cursor-pointer pt-[24px]">
         Learn more
       </p>
     </div>
